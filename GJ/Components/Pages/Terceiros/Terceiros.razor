@@ -1,0 +1,247 @@
+﻿@page "/terceiros"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using GJ.Models
+@using GJ.Services
+@inject ITerceiroService TerceiroService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>GJ - Gestão de Terceiros</PageTitle>
+
+@if (!isAuthenticated)
+{
+    <div class="alert alert-warning text-center">
+        <h4>Acesso Não Autorizado</h4>
+        <p>Necessita de fazer login para aceder a esta página.</p>
+        <a href="/login" class="btn btn-primary">Fazer Login</a>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Gestão de Terceiros</h3>
+        <div>
+            <span class="me-3">Bem-vindo, @userName!</span>
+            <button class="btn btn-primary" @onclick="NovoTerceiro">
+                <i class="bi bi-plus-circle"></i> Novo Terceiro
+            </button>
+        </div>
+    </div>
+
+    <!-- Barra de Pesquisa -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Pesquisar por nome, NIF ou email..."
+                       @bind="searchTerm" @bind:event="oninput" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="SearchTerceiros">
+                    <i class="bi bi-search"></i> Pesquisar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Terceiros -->
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">A carregar...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nome</th>
+                        <th>NIF</th>
+                        <th>Telefone</th>
+                        <th>Email</th>
+                        <th>Data Registo</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var terceiro in terceiros)
+                    {
+                        <tr>
+                            <td>@terceiro.Nome</td>
+                            <td>@terceiro.Nif</td>
+                            <td>@terceiro.Telefone</td>
+                            <td>@terceiro.Email</td>
+                            <td>@terceiro.DataCriacao.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => EditarTerceiro(terceiro.Id)">
+                                        <i class="bi bi-pencil"></i> Editar
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmarExclusao(terceiro)">
+                                        <i class="bi bi-trash"></i> Excluir
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!terceiros.Any())
+        {
+            <div class="alert alert-info text-center">
+                <i class="bi bi-info-circle"></i> Nenhum terceiro encontrado.
+            </div>
+        }
+    }
+
+    <!-- Modal de Confirmação de Exclusão -->
+    @if (showDeleteModal)
+    {
+        <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5)">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Exclusão</h5>
+                        <button type="button" class="btn-close" @onclick="FecharModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Tem certeza que deseja excluir o terceiro <strong>@terceiroParaExcluir?.Nome</strong>?</p>
+                        <p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="FecharModal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" @onclick="ExcluirTerceiro">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Terceiro> terceiros = new();
+    private string searchTerm = string.Empty;
+    private bool isLoading = true;
+    private bool showDeleteModal = false;
+    private Terceiro? terceiroParaExcluir;
+
+    // VARIÁVEIS DE AUTENTICAÇÃO (ADICIONAR ESTAS)
+    private bool isAuthenticated = false;
+    private string userName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("Terceiros.razor - OnInitializedAsync iniciado");
+
+        // Verificar autenticação
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        Console.WriteLine($"Usuário autenticado: {user.Identity?.IsAuthenticated}");
+        Console.WriteLine($"Nome do usuário: {user.Identity?.Name}");
+
+        isAuthenticated = user.Identity?.IsAuthenticated == true;
+        userName = user.Identity?.Name ?? "Utilizador";
+
+        if (isAuthenticated)
+        {
+            Console.WriteLine("Usuário autenticado - carregando terceiros...");
+            await CarregarTerceiros();
+        }
+        else
+        {
+            Console.WriteLine("Usuário NÃO autenticado - mostrando mensagem de acesso não autorizado");
+        }
+    }
+
+    private async Task CarregarTerceiros()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            terceiros = await TerceiroService.GetTerceirosAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar terceiros: {ex.Message}");
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task SearchTerceiros()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                terceiros = await TerceiroService.GetTerceirosAsync();
+            }
+            else
+            {
+                terceiros = await TerceiroService.SearchTerceirosAsync(searchTerm);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro na pesquisa: {ex.Message}");
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void NovoTerceiro()
+    {
+        Navigation.NavigateTo("/terceiros/novo");
+    }
+
+    private void EditarTerceiro(int id)
+    {
+        Navigation.NavigateTo($"/terceiros/editar/{id}");
+    }
+
+    private void ConfirmarExclusao(Terceiro terceiro)
+    {
+        terceiroParaExcluir = terceiro;
+        showDeleteModal = true;
+        StateHasChanged();
+    }
+
+    private void FecharModal()
+    {
+        showDeleteModal = false;
+        terceiroParaExcluir = null;
+        StateHasChanged();
+    }
+
+    private async Task ExcluirTerceiro()
+    {
+        if (terceiroParaExcluir != null)
+        {
+            try
+            {
+                var sucesso = await TerceiroService.DeleteTerceiroAsync(terceiroParaExcluir.Id);
+                if (sucesso)
+                {
+                    await CarregarTerceiros();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao excluir: {ex.Message}");
+            }
+        }
+        FecharModal();
+    }
+}

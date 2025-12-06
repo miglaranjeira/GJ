@@ -1,0 +1,106 @@
+﻿@page "/login-process"
+@using GJ.Services
+@using Microsoft.AspNetCore.Authentication
+@using System.Security.Claims
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Processando Login...</PageTitle>
+
+<div class="text-center mt-5">
+    <h4>Processando login...</h4>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Processando...</span>
+    </div>
+
+    <p class="mt-3">@debugMessage</p>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "username")]
+    public string? Username { get; set; }
+
+    [SupplyParameterFromQuery(Name = "password")]
+    public string? Password { get; set; }
+
+    private string debugMessage = "Iniciando...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        debugMessage = "Verificando credenciais...";
+        StateHasChanged();
+        await Task.Delay(100);
+
+        if (string.IsNullOrEmpty(Username) || string.IsNullOrEmpty(Password))
+        {
+            debugMessage = "Credenciais vazias...";
+            await Task.Delay(500);
+            Navigation.NavigateTo("/login?error=missing");
+            return;
+        }
+
+        try
+        {
+            debugMessage = $"Autenticando {Username}...";
+            StateHasChanged();
+
+            var utilizador = await AuthService.AuthenticateAsync(Username, Password);
+
+            if (utilizador != null)
+            {
+                debugMessage = "Utilizador encontrado, criando cookie...";
+                StateHasChanged();
+
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, utilizador.id.ToString()),
+                    new Claim(ClaimTypes.Name, utilizador.username),
+                    new Claim("Cliente", utilizador.cliente.ToString()),
+                    new Claim("Role", utilizador.role.ToString())
+                };
+
+                if (!string.IsNullOrEmpty(utilizador.nome))
+                    claims.Add(new Claim(ClaimTypes.GivenName, utilizador.nome));
+
+                if (!string.IsNullOrEmpty(utilizador.email))
+                    claims.Add(new Claim(ClaimTypes.Email, utilizador.email));
+
+                var claimsIdentity = new ClaimsIdentity(claims, "Cookies");
+                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+                debugMessage = "Criando sessão...";
+                StateHasChanged();
+
+                await HttpContextAccessor.HttpContext!.SignInAsync(
+                    "Cookies",
+                    claimsPrincipal,
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc = DateTime.UtcNow.AddDays(7)
+                    });
+
+                debugMessage = "Login bem-sucedido! Redirecionando...";
+                StateHasChanged();
+                await Task.Delay(500);
+
+                Navigation.NavigateTo("/terceiros");
+            }
+            else
+            {
+                debugMessage = "Credenciais inválidas...";
+                await Task.Delay(500);
+                Navigation.NavigateTo("/login?error=invalid");
+            }
+        }
+        catch (Exception ex)
+        {
+            debugMessage = $"Erro: {ex.Message}";
+            StateHasChanged();
+            Console.WriteLine($"Erro completo no login: {ex}");
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/login?error=exception");
+        }
+    }
+}

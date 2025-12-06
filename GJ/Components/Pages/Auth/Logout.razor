@@ -1,0 +1,15 @@
+﻿@page "/logout"
+
+<PageTitle>Logout</PageTitle>
+
+<script>
+    // Redirecionar imediatamente para logout
+    window.location.href = '/auth/signout?returnUrl=/login';
+</script>
+
+<div class="text-center mt-5">
+    <h4>A terminar sessão...</h4>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">A terminar sessão...</span>
+    </div>
+</div>

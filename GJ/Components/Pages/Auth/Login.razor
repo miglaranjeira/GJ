@@ -1,0 +1,52 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+
+<PageTitle>GJ - Login</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="text-center">Login</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/auth/signin">
+                        <div class="form-group mb-3">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" class="form-control" required />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" class="form-control" required />
+                        </div>
+
+                        <input type="hidden" name="returnUrl" value="/terceiros" />
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Entrar
+                        </button>
+                    </form>
+
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">
+                            @ErrorMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    private string ErrorMessage => Error == "Credenciais inválidas"
+        ? "Username ou password incorretos."
+        : string.Empty;
+}
