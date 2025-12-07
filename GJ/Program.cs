@@ -12,25 +12,29 @@ builder.Services.AddRazorComponents()
 // Adicionar controladores
 builder.Services.AddControllers();
 
-// Registrar serviços (apenas os necessários)
+// Registrar serviï¿½os (apenas os necessï¿½rios)
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITerceiroService, TerceiroService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
-// Configurar autenticação com cookies
+// Configurar autenticaï¿½ï¿½o com cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.Cookie.Name = "GJ.Auth";
         options.LoginPath = "/login";
         options.LogoutPath = "/auth/signout";
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.ExpireTimeSpan = TimeSpan.FromDays(5);
         options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
-// Autorização
+// Autorizaï¿½ï¿½o
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
