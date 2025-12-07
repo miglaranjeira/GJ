@@ -32,15 +32,15 @@ public class AuthService
                 {
                     return new Utilizador
                     {
-                        id = reader.GetInt32(0),
-                        username = reader.GetString(1),
-                        cliente = reader.GetInt32(2),
-                        role = reader.GetInt32(3),
-                        Passe = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        nome = reader.IsDBNull(5) ? null : reader.GetString(5),
-                        email = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        telefoneMovel = reader.IsDBNull(7) ? null : reader.GetString(7),
-                        IPusual = reader.IsDBNull(8) ? null : reader.GetString(8)
+                        id = reader.GetInt32(reader.GetOrdinal("id")),
+                        username = reader.GetString(reader.GetOrdinal("username")),
+                        cliente = reader.GetInt32(reader.GetOrdinal("cliente")),
+                        role = reader.GetInt32(reader.GetOrdinal("role")),
+                        Passe = reader.IsDBNull(reader.GetOrdinal("Passe")) ? null : reader.GetString(reader.GetOrdinal("Passe")),
+                        nome = reader.IsDBNull(reader.GetOrdinal("nome")) ? null : reader.GetString(reader.GetOrdinal("nome")),
+                        email = reader.IsDBNull(reader.GetOrdinal("email")) ? null : reader.GetString(reader.GetOrdinal("email")),
+                        telefoneMovel = reader.IsDBNull(reader.GetOrdinal("telefoneMovel")) ? null : reader.GetString(reader.GetOrdinal("telefoneMovel")),
+                        IPusual = reader.IsDBNull(reader.GetOrdinal("IPusual")) ? null : reader.GetString(reader.GetOrdinal("IPusual"))
                     };
                 }
             }
